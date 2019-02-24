@@ -2,7 +2,7 @@
 
 App backend for a simple idea board 
 
-By Carly Ilg and Nate Vaughan
+By Carly Ilg (https://github.com/cilg017) and Nate Vaughan (https://github.com/natevaughan/)
 
 ## Dependencies
 
