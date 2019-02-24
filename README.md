@@ -16,3 +16,7 @@ Copy appconfig.yml.sample to appconfig.yml:
 `cp appconfig.yml.sample appconfig.yml`
 
 Edit `appconfig.yml` with your mysql connection string., replacing "root" with your mysql user and adding a password after the colon.
+
+Run the app:
+`go run carlyboard.go db.go appconfig.go`
+
