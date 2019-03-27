@@ -21,4 +21,3 @@ Edit `appconfig.yml` with your mysql connection string, replacing "root" with yo
 Run the app:
 
 `go run carlyboard.go db.go appconfig.go`
-
