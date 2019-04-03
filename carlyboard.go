@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"log"
-	"net/http"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -22,8 +23,16 @@ func main() {
 	}
 
 	dao := BoardDAO{conf.DbHost + "/" + conf.DbName}
+	c := carlyHandler{dao}
+	http.HandleFunc("/helloworld", helloWorldHandler)
+	http.HandleFunc("/board", c.HandleBoardRequests)
+	http.HandleFunc("/section", c.HandleSectionRequests)
+	http.HandleFunc("/stickie", c.HandleStickieRequests)
+	http.HandleFunc("/board/", c.HandleBoardRequests)
+	http.HandleFunc("/section/", c.HandleSectionRequests)
+	http.HandleFunc("/stickie/", c.HandleStickieRequests)
 
-	err = http.ListenAndServe(conf.HttpPort, carlyHandler{dao})
+	err = http.ListenAndServe(conf.HttpPort, nil)
 	log.Fatal(err)
 }
 
@@ -31,73 +40,188 @@ type carlyHandler struct {
 	Dao BoardDAO
 }
 
-func (c carlyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func helloWorldHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "hello, world")
 
-	// todo: routing
-	prefix := strings.Split(r.RequestURI, "?")[0]
-	switch prefix {
-	case "/board":
-		println(r.RequestURI)
-		switch r.Method {
-		case "POST":
-			println(r.Method)
+}
 
-			b, err := ioutil.ReadAll(r.Body)
+func (c carlyHandler) HandleBoardRequests(w http.ResponseWriter, r *http.Request) {
 
-			if err != nil {
-				log.Printf("Error getting data from mysql: %s", err.Error())
-			}
+	switch r.Method {
+	case "POST":
+		println(r.Method)
 
-			var board Board
+		b, err := ioutil.ReadAll(r.Body)
 
-			err = json.Unmarshal(b, &board)
-
-			if err != nil {
-				log.Printf("Error getting data from mysql: %s", err.Error())
-			}
-
-			board, err = c.Dao.CreateBoard(board)
-
-			if err != nil {
-				log.Printf("Error marshalling json: %s", err.Error())
-			}
-
-			j, err := json.Marshal(board)
-
-			if err != nil {
-				log.Printf("Error marshalling json: %s", err.Error())
-			}
-
-			fmt.Fprint(w, string(j))
-			break
-		case "GET":
-			params := r.URL.Query()["id"]
-			if len(params) != 1 {
-				log.Println("Must have only one ID")
-				break
-			}
-			board, err := c.Dao.GetBoard(params[0])
-
-			if err != nil {
-				log.Printf("Error getting data from mysql: %s", err.Error())
-			}
-
-			log.Printf("Successfully retrieved board %s, %s, %s", board.Uuid, board.Name, board.Description)
-
-			j, err := json.Marshal(board)
-
-			if err != nil {
-				log.Printf("Error marshalling json: %s", err.Error())
-			}
-
-			fmt.Fprint(w, string(j))
-
-			break
-		default:
-			log.Println("could not map request" + r.RequestURI)
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
 		}
+
+		var board Board
+
+		err = json.Unmarshal(b, &board)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		board, err = c.Dao.CreateBoard(board)
+
+		if err != nil {
+			log.Printf("Error marshalling json: %s", err.Error())
+		}
+
+		respond(w, board)
+		break
+	case "GET":
+		params := strings.Split(r.RequestURI, "/")
+		if len(params) != 3 {
+			log.Println("cannot find board: " + r.RequestURI)
+			break
+		}
+
+		i, err := strconv.ParseInt(params[2], 10, 64)
+
+		if err != nil {
+			log.Printf(err.Error())
+		}
+
+		board, err := c.Dao.GetBoard(i)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		log.Printf("Successfully retrieved board %s, %s, %s", board.Id, board.Name, board.Description)
+
+		respond(w, board)
+
+		break
 	default:
-		println("unknown: " + r.RequestURI)
+		fmt.Fprint(w, "Method not supported: "+r.Method)
+	}
+}
+
+func (c carlyHandler) HandleStickieRequests(w http.ResponseWriter, r *http.Request) {
+
+	switch r.Method {
+	case "POST":
+		println(r.Method)
+
+		b, err := ioutil.ReadAll(r.Body)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		var stickie Stickie
+
+		err = json.Unmarshal(b, &stickie)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		stickie, err = c.Dao.CreateSticke(stickie)
+
+		if err != nil {
+			log.Printf("Error marshalling json: %s", err.Error())
+		}
+
+		respond(w, stickie)
+		break
+	case "GET":
+		params := strings.Split(r.RequestURI, "/")
+		if len(params) != 3 {
+			log.Println("cannot find stickie: " + r.RequestURI)
+			break
+		}
+
+		i, err := strconv.ParseInt(params[2], 10, 64)
+
+		if err != nil {
+			log.Printf(err.Error())
+		}
+
+		stickie, err := c.Dao.GetStickie(i)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		log.Printf("Successfully retrieved stickie %s, %s, %s", stickie.Id, stickie.Content, stickie.SectionId)
+
+		respond(w, stickie)
+
+		break
+	default:
+		fmt.Fprint(w, "Method not supported: "+r.Method)
+	}
+}
+
+func (c carlyHandler) HandleSectionRequests(w http.ResponseWriter, r *http.Request) {
+
+	switch r.Method {
+	case "POST":
+		println(r.Method)
+
+		b, err := ioutil.ReadAll(r.Body)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		var section Section
+
+		err = json.Unmarshal(b, &section)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		section, err = c.Dao.CreateSection(section)
+
+		if err != nil {
+			log.Printf("Error marshalling json: %s", err.Error())
+		}
+
+		respond(w, section)
+		break
+	case "GET":
+		params := strings.Split(r.RequestURI, "/")
+		if len(params) != 3 {
+			log.Println("cannot find section: " + r.RequestURI)
+			break
+		}
+
+		i, err := strconv.ParseInt(params[2], 10, 64)
+
+		if err != nil {
+			log.Printf(err.Error())
+		}
+
+		section, err := c.Dao.GetSection(i)
+
+		if err != nil {
+			log.Printf("Error getting data from mysql: %s", err.Error())
+		}
+
+		respond(w, section)
+
+		break
+	default:
+		fmt.Fprint(w, "Method not supported: "+r.Method)
+	}
+}
+
+func respond(w http.ResponseWriter, i interface{}) {
+
+	j, err := json.Marshal(i)
+
+	if err != nil {
+		log.Printf("Error marshalling json: %s", err.Error())
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, string(j))
 }

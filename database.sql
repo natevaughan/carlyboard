@@ -3,17 +3,17 @@ CREATE DATABASE carlyboard;
 USE carlyboard; 
 
 CREATE TABLE board (
-    uuid VARCHAR(64) NOT NULL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL,
-    description TEXT
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255) DEFAULT NULL
 );
 
 CREATE TABLE section (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    board_uuid VARCHAR(64) NOT NULL, 
-    title VARCHAR(128) NOT NULL,
-    FOREIGN KEY fk_section_board(board_uuid)
-    REFERENCES board(uuid)
+    board_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    FOREIGN KEY fk_section_board(board_id)
+    REFERENCES board(ID)
     ON DELETE RESTRICT
     ON UPDATE CASCADE
 );
@@ -21,8 +21,8 @@ CREATE TABLE section (
 CREATE TABLE stickie (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     section_id BIGINT NOT NULL,
-    content TEXT,
-    FOREIGN KEY fk_stickie_section(section_id)
+    content TEXT NOT NULL,
+    FOREIGN KEY fk_sticky_section(section_id)
     REFERENCES section(id)
     ON DELETE RESTRICT
     ON UPDATE CASCADE
